@@ -47,7 +47,7 @@ def build_model(num_classes):
     return mod
 
 
-def train_model(mod, training, validation, gpus=0, batch_size=32, epochs=10):
+def train_model(mod, training, validation, gpus=0, batch_size=32, epochs=10, save_images=False):
     """
     @type mod: keras.models.Model
     @type training: basestring (directory)
@@ -55,6 +55,7 @@ def train_model(mod, training, validation, gpus=0, batch_size=32, epochs=10):
     @type gpus: int
     @type batch_size: int
     @type epochs: int
+    @type save_images: bool
 
     Train an InceptionV3-based Keras model's top 2 layers using the given data directories
     Trains on batches of size 32 for 10 epochs by default, tweakable with the batch_size and epochs parameters
@@ -76,10 +77,13 @@ def train_model(mod, training, validation, gpus=0, batch_size=32, epochs=10):
     checkpointer = ModelCheckpoint(filepath=MODEL_SAVE_PATH, save_best_only=True, verbose=1)
     tensorboard_log = TensorBoard(log_dir=os.path.join(os.path.dirname(__file__), "save", "logs"))
 
+    image_save_dir = os.path.join(os.path.dirname(__file__), "save", "augmented_images")
+
     class_indices = train_from_directories(mod, training, validation,
                                            nb_batches=batch_size, nb_epochs=epochs,
                                            image_size=(IMAGE_FORMAT[0], IMAGE_FORMAT[1]),
-                                           callbacks=[checkpointer, tensorboard_log])
+                                           callbacks=[checkpointer, tensorboard_log],
+                                           save_dir=image_save_dir if save_images else False)
 
     # Save model and class indices to file
     mod.save(MODEL_SAVE_PATH)
@@ -188,7 +192,7 @@ if __name__ == "__main__":
                               help="How large batches to split training data into, defaults to 32")
     train_parser.add_argument("-s", "--save_images",
                               help="Save the augmented images generated during training to save/augmented_images",
-                              action="store_true")  # TODO actually make this have an effect
+                              action="store_true")
     train_parser.add_argument("data_dir",
                               type=str,
                               help="A path to a directory containing the training data")
@@ -251,7 +255,7 @@ if __name__ == "__main__":
 
         # Begin training
         trained_model, _ = train_model(model, training_dir, validation_dir,
-                                       gpus=args.gpu_count, batch_size=args.batch_size, epochs=args.epochs)
+                                       gpus=args.gpu_count, batch_size=args.batch_size, epochs=args.epochs, save_images=args.save_images)
 
         # If the fine_tune flag is set, fine-tune the model after primary training
         if args.fine_tune:
