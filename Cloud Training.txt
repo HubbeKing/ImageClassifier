@@ -1,0 +1,66 @@
+Training time:
+    Intel Core i7-7500U 2 cores, 4 threads, Windows (~80% CPU usage?? why tho)
+        445s for epoch 1 (440 images), ~1s per image
+
+Amazon EC2:
+    
+    Data transfer costs should be very small, since our image size can be as small as 300x300
+    Data transfer in is free.
+    Data storage will cost depending on usage, but even with 50GB of data should be < $10
+    Data transfer out costs ~ $0.15/GB, but all we're transferring out is the model
+        Should be <1GB of data out
+    Total data costs: ~ $10
+    
+    Compute costs:
+    Nvidia K80 GPUs, EU Ireland
+        p2.xlarge   - 1 GPU   $0.972/hour
+        p2.8xlarge  - 8 GPUs  $7.776/hour
+        p2.16xlarge - 16 GPUs $15.552/hour
+        
+    Single-GPU instance (p2.xlarge) EU Ireland - $0.972/hour
+    Estimate at least a few days worth of computation for a classifier with lots of data
+    
+    Rough cost-estimate (4x24 = 96 hours):
+        96 hours @ $0.972/hour = $93.31 = ~ €80
+        Assuming non-ideal speedup of 6x and 10x for 8xlarge and 16xlarge instances:
+            p2.8xlarge  - 16 * $7.776  = $124.416 = ~ €110
+            p2.16xlarge - 10 * $15.552 = $155.520 = ~ €135
+        
+    Total training costs should ideally be ~ €100 per full round of training
+    Single round of training should be sufficient, provided the data set trained on is large enough
+    (50 epochs at 2000 steps per epoch, plus 800 steps of validation)
+    
+    Worst-case scenario, training takes as much as 2 weeks. (14*24 = 336 hours)
+        This would mean a cost of 336 * $0.972 = $326.592 = ~ €280
+        In this case, using an 8x or 16x instance would perhaps be better
+        Assuming non-ideal speedup of 6x and 10x:
+            p2.8xlarge  - 56 * $7.776  = $435.456 = ~ €370
+            p2.16xlarge - 34 * $15.552 = $528.768 = ~ €450
+            
+    Pessimistic worst-case, few days of training on a p2.16xlarge machine:
+        96 * $15.552 = $1492.992 = ~ €1270
+        
+    Absolute worst-case, full 2 weeks of training on a p2.16xlarge machine:
+        336 * $15.552 = $5225.472 = ~ €4450
+    
+    "Realistic" case 
+        Nvidia claims in promo material that ResNet-50 for 90 Epochs takes 38 hours on 8x K80
+        (Using Caffe2 and 1.28M ImageNet dataset)
+        (We're on InceptionV3, for 50 epochs, using Tensorflow and a smaller dataset)
+        
+        38 hours on a p2.8xlarge (8x K80)
+            38 * $7.776 = $295.488 = ~ €250
+            
+            
+Microsoft Azure
+    €170 free credit
+    West US2:
+        NC6 v2 instance
+            6 CPU cores, 112GiB RAM, 336GiB storage, 1x P100 GPU
+            €0.759/hour
+            48 hours:  ~ €37
+            96 hours:  ~ €73
+            144 hours: ~ €109
+            336 hours: ~ €255
+        NC6 v1, same specs/price, 1xK80 GPU   
+    
