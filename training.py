@@ -5,9 +5,6 @@ from shutil import move
 
 from keras.preprocessing.image import ImageDataGenerator
 
-# TODO use a single ImageDataGenerator, manually get its batches with generator.next()
-# TODO pass those batches, along with settings and a validation_split to model.fit()
-
 
 def split_data_directory(data_dir, training_size=0.70):
     """
@@ -63,11 +60,6 @@ def train_from_directories(model, training_dir, validation_dir, image_size, batc
     Saves the class index to file if save_index=True
     """
 
-    # The number of steps per epoch should be equal to the number of unique images divided by the batch size
-    # So we need to know how many samples are in the training and validation directories
-    nb_train_samples = sum([len(files) for r, d, files in os.walk(training_dir)])
-    nb_validation_samples = sum([len(files) for r, d, files in os.walk(validation_dir)])
-
     # Perform real-time data augmentation to (hopefully) get better end-results
     train_datagen = ImageDataGenerator(
         rescale=1. / 255,
@@ -98,11 +90,14 @@ def train_from_directories(model, training_dir, validation_dir, image_size, batc
         class_mode="categorical"
     )
 
+    # Train the model using the created generators
+    # steps_per_epoch will be equal to the number of samples divided by the batch size,
+    # so each epoch should cover the entire dataset once
     model.fit_generator(
         train_generator,
-        steps_per_epoch=nb_train_samples // batch_size,
+        steps_per_epoch=train_generator.samples // train_generator.batch_size,
         epochs=nb_epochs,
         validation_data=validation_generator,
-        validation_steps=nb_validation_samples // batch_size,
+        validation_steps=validation_generator.samples // validation_generator.batch_size,
         callbacks=callbacks
     )

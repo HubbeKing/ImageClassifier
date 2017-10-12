@@ -1,6 +1,25 @@
-Training time:
-    Intel Core i7-7500U 2 cores, 4 threads, Windows (~80% CPU usage?? why tho)
-        445s for epoch 1 (440 images), ~1s per image
+Training tests:
+    Intel Core i7-7500U 2 cores, 4 threads, Windows
+        Resulted in broken model, returned nonsensical predictions even after several epochs
+        2000 training samples
+        800 validation samples
+            Batch_size=10
+            Epoch 1 - 1549s
+            ~ 0.56s per image (299x299x3)
+
+            loss: 0.3053 - categorical_accuracy: 0.8890 - val_loss: 0.1251 - val_categorical_accuracy: 0.9512
+
+
+    Amazon EC2 - m4.large (2 vCPU), Amazon Linux
+        Single-epoch training resulted in inaccurate, but seemingly functional model
+        Long-term training underway.
+        2000 training samples
+        800 validation samples
+            Batch_size=10
+            Epoch 1 - 2614s3
+            ~ 0.93s per image (299x299x3)
+
+            loss: 0.3472 - categorical_accuracy: 0.8760 - val_loss: 0.0796 - val_categorical_accuracy: 0.9775
 
 Amazon EC2:
     
