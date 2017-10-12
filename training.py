@@ -40,16 +40,17 @@ def split_data_directory(data_dir, training_size=0.70):
     return os.path.join(data_dir, "training"), os.path.join(data_dir, "validation")
 
 
-def train_from_directories(model, training_dir, validation_dir, nb_batches=32, nb_epochs=50, image_size=None, save_dir=None, callbacks=None):
+def train_from_directories(model, training_dir, validation_dir, image_size, nb_batches=32, nb_epochs=50, save_dir=None, callbacks=None, save_index=False):
     """
     @type model: keras.models.Model
     @type training_dir: basestring
     @type validation_dir: basestring
+    @type image_size: tuple (int, int)
     @type nb_batches: int
     @type nb_epochs: int
-    @type image_size: None | tuple (int, int)
     @type save_dir: None | basestring
     @type callbacks: None | list
+    @type save_index: bool
 
     Trains the given Keras model using the given paths as data sources for .flow_from_directory
     Counts the number of images in the dataset to ensure each training epoch covers the entire dataset
@@ -57,6 +58,7 @@ def train_from_directories(model, training_dir, validation_dir, nb_batches=32, n
     If save_dir is a string, it's treated as a path to save transformed input data to (useful for visualizing preprocessing results)
     Callsbacks may be a list of keras callbacks to supply to fit_generator
     Returns a dictionary mapping class names to class indices, for use when using model to predict data
+    Saves the class index to file if save_index=True
     """
 
     # The number of steps per epoch should be equal to the number of unique images divided by the batch size
@@ -64,8 +66,6 @@ def train_from_directories(model, training_dir, validation_dir, nb_batches=32, n
 
     training_steps = ceil((sum([len(files) for r, d, files in os.walk(training_dir)]) / float(nb_batches)))
     validation_steps = ceil((sum([len(files) for r, d, files in os.walk(validation_dir)]) / float(nb_batches)))
-
-    from main import DATA_FORMAT
 
     # Perform real-time data augmentation to (hopefully) get better end-results
     datagen = ImageDataGenerator(
@@ -75,14 +75,8 @@ def train_from_directories(model, training_dir, validation_dir, nb_batches=32, n
         shear_range=0.2,
         zoom_range=0.2,
         horizontal_flip=True,
-        rescale=1./255,
-        data_format=DATA_FORMAT
+        rescale=1./255
     )
-
-    if image_size is None:
-        # Get the image size defined in main.py
-        from main import IMAGE_FORMAT
-        image_size = (IMAGE_FORMAT[0], IMAGE_FORMAT[1])
 
     train_generator = datagen.flow_from_directory(
         directory=training_dir,
@@ -92,10 +86,10 @@ def train_from_directories(model, training_dir, validation_dir, nb_batches=32, n
         save_to_dir=save_dir,
         save_prefix="sample"
     )
-
-    from main import INDEX_SAVE_PATH
-    with open(INDEX_SAVE_PATH, "wb") as pickle_file:
-        pickle.dump(train_generator.class_indices, pickle_file, pickle.HIGHEST_PROTOCOL)
+    if save_index:
+        from main import INDEX_SAVE_PATH
+        with open(INDEX_SAVE_PATH, "wb") as pickle_file:
+            pickle.dump(train_generator.class_indices, pickle_file)
 
     validation_generator = datagen.flow_from_directory(
         directory=validation_dir,

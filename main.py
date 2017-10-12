@@ -4,17 +4,15 @@ import os
 
 from keras.applications.inception_v3 import InceptionV3, preprocess_input
 from keras.callbacks import ModelCheckpoint, TensorBoard
-from keras.layers import Dense, GlobalAveragePooling2D, Input
+from keras.layers import Dense, Dropout, GlobalAveragePooling2D
 from keras.models import Model, load_model
-from keras.optimizers import SGD
+from keras.optimizers import Adam
 from keras.preprocessing import image
 import numpy as np
 
 from multi_gpu import make_parallel
 from training import split_data_directory, train_from_directories
 
-IMAGE_FORMAT = (299, 299, 3)
-DATA_FORMAT = "channels_last"
 # 299x299 images, in RGB format (channels_last)
 MODEL_SAVE_PATH = os.path.join(os.path.dirname(__file__), "model", "image_tagger.h5")
 INDEX_SAVE_PATH = os.path.join(os.path.dirname(__file__), "model", "class_index.pkl")
@@ -27,15 +25,16 @@ def build_model(num_classes):
     """
     # Base our model on the InceptionV3 convolutional model
     # By using InceptionV3 as a pre-trained base, we can use its feature extractors to "drive" our own classification layer
-    input_tensor = Input(shape=IMAGE_FORMAT)
-    base_model = InceptionV3(include_top=False, weights="imagenet", input_tensor=input_tensor)
+    base_model = InceptionV3(include_top=False, weights="imagenet")
 
-    # Recreate the InceptionV3 top layers
-    # The base model outputs 4D tensors, applying a GlobalAveragePooling2D layer gets us 2D tensors of the image features
-    # The topmost layer is a fully-connected Dense layer with one unit for each of our image classes
+    # Build a classifier model ontop of the convolutional base layers
+    # As the base model outputs 4D tensors (feature maps), we first average them out to get a 2D tensor
+    # Then we add a two Dense layers, separated by an 0.5 Dropout layer to prevent the final layer from seeing similar data on consequtive epochs
+    # The final layer has num_classes units, and softmax activation, and thus outputs a list of probabilities, one for each image class
     x = base_model.output
     x = GlobalAveragePooling2D(name='avg_pool')(x)
     x = Dense(1024, activation="relu")(x)
+    x = Dropout(0.5)(x)
     x = Dense(num_classes, activation="softmax", name="predictions")(x)
 
     # Our final model is thus the convolutional parts of InceptionV3 with fully-connected classifier layers ontop
@@ -60,17 +59,17 @@ def train_model(mod, training, validation, gpus=0, batch_size=32, epochs=10, sav
     Train an InceptionV3-based Keras model's top 2 layers using the given data directories
     Trains on batches of size 32 for 10 epochs by default, tweakable with the batch_size and epochs parameters
     """
-    for layer in mod.layers[:-3]:
+    for layer in mod.layers[:-4]:
         # Freeze all but the 2 top-most layers in the model
         layer.trainable = False
-    for layer in mod.layers[-3:]:
+    for layer in mod.layers[-4:]:
         # Ensure the 2 top-most layers are un-frozen
         layer.trainable = True
     if gpus > 1:
         # If we have specified more than 1 GPU, parallelize with Tensorflow's tf.device
         mod = make_parallel(mod, gpu_count=gpus)
     # Compile model, making it ready for training
-    mod.compile(optimizer="rmsprop", loss="categorical_crossentropy", metrics=["categorical_accuracy"])
+    mod.compile(optimizer="rmsprop", loss="categorical_crossentropy", metrics=["accuracy"])
 
     # Actually train the model, saving the model after every epoch if model has improved
     # Also save tensorboard-compatible logs for later visualization
@@ -79,18 +78,17 @@ def train_model(mod, training, validation, gpus=0, batch_size=32, epochs=10, sav
 
     image_save_dir = os.path.join(os.path.dirname(__file__), "save", "augmented_images")
 
-    class_indices = train_from_directories(mod, training, validation,
-                                           nb_batches=batch_size, nb_epochs=epochs,
-                                           image_size=(IMAGE_FORMAT[0], IMAGE_FORMAT[1]),
-                                           callbacks=[checkpointer, tensorboard_log],
-                                           save_dir=image_save_dir if save_images else False)
+    train_from_directories(mod, training, validation,
+                           nb_batches=batch_size, nb_epochs=epochs,
+                           image_size=(299, 299),
+                           callbacks=[checkpointer, tensorboard_log],
+                           save_dir=image_save_dir if save_images else False,
+                           save_index=True)
 
-    # Save model and class indices to file
+    # Save model to file
     mod.save(MODEL_SAVE_PATH)
-    with open(INDEX_SAVE_PATH, "wb") as f:
-        pickle.dump(class_indices, f, pickle.HIGHEST_PROTOCOL)
 
-    return mod, class_indices
+    return mod
 
 
 def fine_tune_model(mod, training, validation, gpus=0, batch_size=32, epochs=10):
@@ -116,20 +114,21 @@ def fine_tune_model(mod, training, validation, gpus=0, batch_size=32, epochs=10)
         # If we have specified more than 1 GPU, parallelize with Tensorflow's tf.device
         mod = make_parallel(mod, gpu_count=gpus)
 
-    # Compile the model with a tweaked SGD optimizer
-    mod.compile(optimizer=SGD(lr=1e-4, momentum=0.9), loss="categorical_crossentropy", metrics=["categorical_accuracy"])
+    # Compile the model with a tweaked Adam optimizer, with a slow learning rate
+    mod.compile(optimizer=Adam(lr=1e-5), loss="categorical_crossentropy", metrics=["accuracy"])
 
     # Actually train model, saving the model after every epoch if model has improved
     checkpointer = ModelCheckpoint(filepath=MODEL_SAVE_PATH, save_best_only=True, verbose=1)
-    class_indices = train_from_directories(mod, training, validation,
-                                           nb_batches=batch_size, nb_epochs=epochs, callbacks=[checkpointer])
+    train_from_directories(mod, training, validation,
+                           nb_batches=batch_size,
+                           nb_epochs=epochs,
+                           callbacks=[checkpointer],
+                           image_size=(299, 299))
 
     # Save model and class indices to file
     mod.save(MODEL_SAVE_PATH)
-    with open(INDEX_SAVE_PATH, "wb") as f:
-        pickle.dump(class_indices, f, pickle.HIGHEST_PROTOCOL)
 
-    return mod, class_indices
+    return mod
 
 
 def predict_image_classes(mod, classes, image_filepath):
@@ -141,7 +140,7 @@ def predict_image_classes(mod, classes, image_filepath):
     Given a Keras model, its class index dictionary, and a path to an image file, tries to classify the image using the model
     Prints the classification result as a list of the 5 most likely image classes and the prediction certainty
     """
-    img = image.load_img(image_filepath, target_size=(IMAGE_FORMAT[0], IMAGE_FORMAT[1]))
+    img = image.load_img(image_filepath, target_size=(299, 299))
     x = image.img_to_array(img)
     x = np.expand_dims(x, axis=0)
     x = preprocess_input(x)
@@ -188,8 +187,8 @@ if __name__ == "__main__":
                               help="How many epochs to train for, defaults to 10")
     train_parser.add_argument("-b", "--batch_size",
                               type=int,
-                              default=32,
-                              help="How large batches to split training data into, defaults to 32")
+                              default=10,
+                              help="How large batches to split training data into, defaults to 10")
     train_parser.add_argument("-s", "--save_images",
                               help="Save the augmented images generated during training to save/augmented_images",
                               action="store_true")
@@ -210,8 +209,8 @@ if __name__ == "__main__":
                                   help="How many epochs to train for, defaults to 10")
     fine_tune_parser.add_argument("-b", "--batch_size",
                                   type=int,
-                                  default=32,
-                                  help="How large batches to split training data into, defaults to 32")
+                                  default=10,
+                                  help="How large batches to split training data into, defaults to 10")
     fine_tune_parser.add_argument("data_dir",
                                   type=str,
                                   help="A path to a directory containing the training data")
@@ -254,8 +253,9 @@ if __name__ == "__main__":
         print("Total number of layers in model: {}".format(len(model.layers)))
 
         # Begin training
-        trained_model, _ = train_model(model, training_dir, validation_dir,
-                                       gpus=args.gpu_count, batch_size=args.batch_size, epochs=args.epochs, save_images=args.save_images)
+        trained_model = train_model(model, training_dir, validation_dir,
+                                    gpus=args.gpu_count, batch_size=args.batch_size,
+                                    epochs=args.epochs, save_images=args.save_images)
 
         # If the fine_tune flag is set, fine-tune the model after primary training
         if args.fine_tune:
