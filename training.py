@@ -1,10 +1,12 @@
 import os
-from math import ceil
 import pickle
 import random
 from shutil import move
 
 from keras.preprocessing.image import ImageDataGenerator
+
+# TODO use a single ImageDataGenerator, manually get its batches with generator.next()
+# TODO pass those batches, along with settings and a validation_split to model.fit()
 
 
 def split_data_directory(data_dir, training_size=0.70):
@@ -40,13 +42,13 @@ def split_data_directory(data_dir, training_size=0.70):
     return os.path.join(data_dir, "training"), os.path.join(data_dir, "validation")
 
 
-def train_from_directories(model, training_dir, validation_dir, image_size, nb_batches=32, nb_epochs=50, save_dir=None, callbacks=None, save_index=False):
+def train_from_directories(model, training_dir, validation_dir, image_size, batch_size=32, nb_epochs=50, save_dir=None, callbacks=None, save_index=False):
     """
     @type model: keras.models.Model
     @type training_dir: basestring
     @type validation_dir: basestring
     @type image_size: tuple (int, int)
-    @type nb_batches: int
+    @type batch_size: int
     @type nb_epochs: int
     @type save_dir: None | basestring
     @type callbacks: None | list
@@ -62,26 +64,24 @@ def train_from_directories(model, training_dir, validation_dir, image_size, nb_b
     """
 
     # The number of steps per epoch should be equal to the number of unique images divided by the batch size
-    # This means one epoch is one full pass-through of the data
-
-    training_steps = ceil((sum([len(files) for r, d, files in os.walk(training_dir)]) / float(nb_batches)))
-    validation_steps = ceil((sum([len(files) for r, d, files in os.walk(validation_dir)]) / float(nb_batches)))
+    # So we need to know how many samples are in the training and validation directories
+    nb_train_samples = sum([len(files) for r, d, files in os.walk(training_dir)])
+    nb_validation_samples = sum([len(files) for r, d, files in os.walk(validation_dir)])
 
     # Perform real-time data augmentation to (hopefully) get better end-results
-    datagen = ImageDataGenerator(
-        rotation_range=40,
-        width_shift_range=0.2,
-        height_shift_range=0.2,
+    train_datagen = ImageDataGenerator(
+        rescale=1. / 255,
         shear_range=0.2,
         zoom_range=0.2,
-        horizontal_flip=True,
-        rescale=1./255
+        horizontal_flip=True
     )
 
-    train_generator = datagen.flow_from_directory(
+    test_datagen = ImageDataGenerator(rescale=1. / 255)
+
+    train_generator = train_datagen.flow_from_directory(
         directory=training_dir,
         target_size=image_size,
-        batch_size=nb_batches,
+        batch_size=batch_size,
         class_mode="categorical",
         save_to_dir=save_dir,
         save_prefix="sample"
@@ -91,20 +91,18 @@ def train_from_directories(model, training_dir, validation_dir, image_size, nb_b
         with open(INDEX_SAVE_PATH, "wb") as pickle_file:
             pickle.dump(train_generator.class_indices, pickle_file)
 
-    validation_generator = datagen.flow_from_directory(
+    validation_generator = test_datagen.flow_from_directory(
         directory=validation_dir,
         target_size=image_size,
-        batch_size=nb_batches,
+        batch_size=batch_size,
         class_mode="categorical"
     )
 
     model.fit_generator(
         train_generator,
-        steps_per_epoch=training_steps,
+        steps_per_epoch=nb_train_samples // batch_size,
         epochs=nb_epochs,
         validation_data=validation_generator,
-        validation_steps=validation_steps,
+        validation_steps=nb_validation_samples // batch_size,
         callbacks=callbacks
     )
-
-    return train_generator.class_indices

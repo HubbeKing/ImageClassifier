@@ -37,8 +37,6 @@ def build_model(num_classes):
     # Our final model is thus the convolutional parts of InceptionV3 with fully-connected classifier layers ontop
     mod = Model(inputs=base_model.input, outputs=predictions)
 
-    # Compile the model, making it ready for training
-    mod.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["categorical_accuracy"])
     # Return the built model, so it can be trained
     return mod
 
@@ -76,7 +74,8 @@ def train_model(mod, training, validation, gpus=0, batch_size=32, epochs=10, sav
     image_save_dir = os.path.join(os.path.dirname(__file__), "save", "augmented_images")
 
     train_from_directories(mod, training, validation,
-                           nb_batches=batch_size, nb_epochs=epochs,
+                           batch_size=batch_size,
+                           nb_epochs=epochs,
                            image_size=(299, 299),
                            callbacks=[checkpointer, tensorboard_log],
                            save_dir=image_save_dir if save_images else False,
@@ -117,7 +116,7 @@ def fine_tune_model(mod, training, validation, gpus=0, batch_size=32, epochs=10)
     # Actually train model, saving the model after every epoch if model has improved
     checkpointer = ModelCheckpoint(filepath=MODEL_SAVE_PATH, save_best_only=True, verbose=1)
     train_from_directories(mod, training, validation,
-                           nb_batches=batch_size,
+                           batch_size=batch_size,
                            nb_epochs=epochs,
                            callbacks=[checkpointer],
                            image_size=(299, 299))
@@ -142,7 +141,7 @@ def predict_image_classes(mod, classes, image_filepath):
     x = np.expand_dims(x, axis=0)
     x = preprocess_input(x)
 
-    predictions = mod.predict(x)
+    predictions = mod.predict(x, batch_size=1)
     print("{} - Predictions: {}".format(image_filepath, decode_predictions(predictions, classes)))
 
 
