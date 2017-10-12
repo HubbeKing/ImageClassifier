@@ -4,7 +4,7 @@ import os
 
 from keras.applications.inception_v3 import InceptionV3, preprocess_input
 from keras.callbacks import ModelCheckpoint, TensorBoard
-from keras.layers import Dense, Dropout, GlobalAveragePooling2D
+from keras.layers import Dense, GlobalAveragePooling2D
 from keras.models import Model, load_model
 from keras.optimizers import Adam
 from keras.preprocessing import image
@@ -28,20 +28,17 @@ def build_model(num_classes):
     base_model = InceptionV3(include_top=False, weights="imagenet")
 
     # Build a classifier model ontop of the convolutional base layers
-    # As the base model outputs 4D tensors (feature maps), we first average them out to get a 2D tensor
-    # Then we add a two Dense layers, separated by an 0.5 Dropout layer to prevent the final layer from seeing similar data on consequtive epochs
     # The final layer has num_classes units, and softmax activation, and thus outputs a list of probabilities, one for each image class
     x = base_model.output
-    x = GlobalAveragePooling2D(name='avg_pool')(x)
+    x = GlobalAveragePooling2D(name="avg_pool")(x)
     x = Dense(1024, activation="relu")(x)
-    x = Dropout(0.5)(x)
-    x = Dense(num_classes, activation="softmax", name="predictions")(x)
+    predictions = Dense(num_classes, activation="softmax", name="predictions")(x)
 
     # Our final model is thus the convolutional parts of InceptionV3 with fully-connected classifier layers ontop
-    mod = Model(inputs=base_model.input, outputs=x)
+    mod = Model(inputs=base_model.input, outputs=predictions)
 
     # Compile the model, making it ready for training
-    mod.compile(optimizer="rmsprop", loss="categorical_crossentropy", metrics=["accuracy"])
+    mod.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["categorical_accuracy"])
     # Return the built model, so it can be trained
     return mod
 
@@ -56,20 +53,20 @@ def train_model(mod, training, validation, gpus=0, batch_size=32, epochs=10, sav
     @type epochs: int
     @type save_images: bool
 
-    Train an InceptionV3-based Keras model's top 2 layers using the given data directories
+    Train an InceptionV3-based Keras model's classification layers using the given data directories
     Trains on batches of size 32 for 10 epochs by default, tweakable with the batch_size and epochs parameters
     """
-    for layer in mod.layers[:-4]:
-        # Freeze all but the 2 top-most layers in the model
+    for layer in mod.layers[:-3]:
+        # Freeze all convolutional layers
         layer.trainable = False
-    for layer in mod.layers[-4:]:
-        # Ensure the 2 top-most layers are un-frozen
+    for layer in mod.layers[-3:]:
+        # Ensure the fully-connected classifier layers are unfrozen
         layer.trainable = True
     if gpus > 1:
         # If we have specified more than 1 GPU, parallelize with Tensorflow's tf.device
         mod = make_parallel(mod, gpu_count=gpus)
     # Compile model, making it ready for training
-    mod.compile(optimizer="rmsprop", loss="categorical_crossentropy", metrics=["accuracy"])
+    mod.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["categorical_accuracy"])
 
     # Actually train the model, saving the model after every epoch if model has improved
     # Also save tensorboard-compatible logs for later visualization
