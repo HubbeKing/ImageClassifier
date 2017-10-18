@@ -1,5 +1,5 @@
 h5py==2.7.*
 Keras==2.0.*
 numpy==1.13.*
-pillow==4.2.*
+pillow
 tensorflow==1.3.*

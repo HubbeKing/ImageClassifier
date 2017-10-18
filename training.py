@@ -32,8 +32,8 @@ def split_data_directory(data_dir, training_size=0.70):
 
         for f in os.listdir(os.path.join(data_dir, image_class)):
             # If the source folder contains an odd number of files, we might miss one or three
-            # Discard them if so, so we can delete the folder
-            os.remove(os.path.join(data_dir, image_class, f))
+            # Move them to the training folder, so that the source is empty and can be removed
+            move(os.path.join(data_dir, image_class, f), training_dir)
         os.rmdir(os.path.join(data_dir, image_class))
 
     return os.path.join(data_dir, "training"), os.path.join(data_dir, "validation")

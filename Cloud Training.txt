@@ -1,43 +1,50 @@
-Training tests:
-    Intel Core i7-7500U 2 cores, 4 threads, Windows
-        Resulted in broken model, returned nonsensical predictions even after several epochs
-        2000 training samples
-        800 validation samples
-            Batch_size=10
-            Epoch 1 - 1549s
-            ~ 0.56s per image (299x299x3)
+Training test, InceptionV3-based model:
+    Amazon EC2 - m4.large (2 vCPU - 6.5 ECU) Amazon Linux Machine Learning AMI
+        2 image classes
+        2000 training samples (1000 per class)
+        800 validation samples (400 per class)
+            batch_size=10
+            Epoch 1 - 2600s - acc: 0.87, val_acc: 0.97 (~45 mins)
+            (~0.93s per image)
 
-            loss: 0.3053 - categorical_accuracy: 0.8890 - val_loss: 0.1251 - val_categorical_accuracy: 0.9512
+    Amazon EC2 - c4.xlarge (4 vCPU - 16 ECU) Amazon Linux Machine Learning AMI
+        2 image classes
+        2000 training samples (1000 per class)
+        800 validation samples (400 per class)
+            batch_size=10
+            Epoch 1 - 1134s - acc: 0.5045, val_acc: 0.5000 (~19 mins)
+            (~0.40s per image)
 
-
-    Amazon EC2 - m4.large (2 vCPU), Amazon Linux
-        Single-epoch training resulted in inaccurate, but seemingly functional model
-        Long-term training underway.
-        2000 training samples
-        800 validation samples
-            Batch_size=10
-            Epoch 1 - 2614s3
-            ~ 0.93s per image (299x299x3)
-
-            loss: 0.3472 - categorical_accuracy: 0.8760 - val_loss: 0.0796 - val_categorical_accuracy: 0.9775
+Training test, Custom model:
+    Amazon EC2 - c4.xlarge (4 vCPU - 16 ECU) Amazon Linux Machine Learning AMI
+        2 image classes
+        2000 training samples (1000 per class)
+        800 validation samples (400 per class)
+            batch_size=10
+            Epoch 1 - 661s - acc: 0.4955, val_acc: 0.5000 (~11 mins)
+            (~0.24s per image)
 
 Amazon EC2:
     
     Data transfer costs should be very small, since our image size can be as small as 300x300
     Data transfer in is free.
-    Data storage will cost depending on usage, but even with 50GB of data should be < $10
-    Data transfer out costs ~ $0.15/GB, but all we're transferring out is the model
-        Should be <1GB of data out
-    Total data costs: ~ $10
+    Data storage is $0.11/GB/month for an EBS volume    (ready to launch with instance)
+                 is $0.05/GB/month for an EBS snapshot  (deep storage, needs a few minutes to create volume and attach to instance before launching)
+        For 50GB of data - ~ $5/month ($2.5 if storing as snapshot instead of volume)
+
+    Data transfer out costs ~ $0.15/GB after the first GB, but all we're transferring out is the model
+    The model should be < 1 GB in size, so no charge for data transfer.
+
     
-    Compute costs:
+    Compute costs (Estimate at least a few days worth of computation for a classifier with lots of training data, for a good 50 epochs):
+    (1 epoch = 1 pass over entire dataset)
+
     Nvidia K80 GPUs, EU Ireland
         p2.xlarge   - 1 GPU   $0.972/hour
         p2.8xlarge  - 8 GPUs  $7.776/hour
         p2.16xlarge - 16 GPUs $15.552/hour
         
     Single-GPU instance (p2.xlarge) EU Ireland - $0.972/hour
-    Estimate at least a few days worth of computation for a classifier with lots of data
     
     Rough cost-estimate (4x24 = 96 hours):
         96 hours @ $0.972/hour = $93.31 = ~ €80
