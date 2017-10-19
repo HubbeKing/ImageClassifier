@@ -62,10 +62,15 @@ def train_from_directories(model, training_dir, validation_dir, image_size, batc
 
     # Perform real-time data augmentation to (hopefully) get better end-results
     train_datagen = ImageDataGenerator(
-        rescale=1. / 255,
+        rotation_range=40,
+        width_shift_range=0.2,
+        height_shift_range=0.2,
         shear_range=0.2,
         zoom_range=0.2,
-        horizontal_flip=True
+        fill_mode="nearest",
+        horizontal_flip=True,
+        vertical_flip=True,
+        rescale=1./255
     )
 
     test_datagen = ImageDataGenerator(rescale=1. / 255)

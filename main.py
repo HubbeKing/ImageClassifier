@@ -6,11 +6,11 @@ from keras.applications.inception_v3 import InceptionV3, preprocess_input
 from keras.callbacks import ModelCheckpoint, TensorBoard
 from keras.layers import Activation, Conv2D, Dense, Dropout, Flatten, GlobalAveragePooling2D, MaxPooling2D
 from keras.models import load_model, Model, Sequential
-from keras.optimizers import Adam
+from keras.optimizers import SGD
 from keras.preprocessing import image
 import numpy as np
 
-from multi_gpu import make_parallel
+from multi_gpu import multi_gpu_model
 from training import split_data_directory, train_from_directories
 
 
@@ -101,8 +101,8 @@ def train_model(mod, training, validation, gpus=0, batch_size=32, epochs=10, sav
             # Ensure the fully-connected classifier layers are unfrozen
             layer.trainable = True
     if gpus > 1:
-        # If we have specified more than 1 GPU, parallelize with Tensorflow's tf.device
-        mod = make_parallel(mod, gpu_count=gpus)
+        # If we have specified more than 1 GPU, perform data parallelism
+        mod = multi_gpu_model(mod, gpus)
     # Compile model, making it ready for training
     mod.compile(optimizer="rmsprop", loss="categorical_crossentropy", metrics=["accuracy"])
 
@@ -155,11 +155,12 @@ def fine_tune_model(mod, training, validation, gpus=0, batch_size=32, epochs=10)
             layer.trainable = True
 
     if gpus > 1:
-        # If we have specified more than 1 GPU, parallelize with Tensorflow's tf.device
-        mod = make_parallel(mod, gpu_count=gpus)
+        # If we have specified more than 1 GPU, perform data parallelism
+        mod = multi_gpu_model(mod, gpus)
 
-    # Compile the model with a tweaked Adam optimizer, with a slow learning rate
-    mod.compile(optimizer=Adam(lr=1e-5), loss="categorical_crossentropy", metrics=["accuracy"])
+    # Compile the model with a tweaked SGD optimizer with a slow learning rate
+    # This make sure the updates done to the weights stays small, so we don't break things
+    mod.compile(optimizer=SGD(lr=1e-4, momentum=0.9), loss="categorical_crossentropy", metrics=["accuracy"])
 
     # Actually train model, saving the model after every epoch if model has improved
     checkpointer = ModelCheckpoint(filepath=MODEL_SAVE_PATH, save_best_only=True, verbose=1)
