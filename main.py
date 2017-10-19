@@ -333,12 +333,13 @@ if __name__ == "__main__":
         if not os.path.exists(MODEL_SAVE_PATH) or overwrite:
             if args.type not in ["inception_v3", "custom"]:
                 print("Unknown model type - must be either \"inception_v3\" or \"custom\"")
-            if args.type == "inception_v3":
-                model = build_inceptionv3_model(len(os.listdir(training_dir)))
             else:
-                model = build_custom_model(len(os.listdir(training_dir)))
-            model.save(filepath=MODEL_SAVE_PATH, overwrite=True)
-            print("Successfully built model and saved to {}".format(MODEL_SAVE_PATH))
+                if args.type == "inception_v3":
+                    model = build_inceptionv3_model(len(os.listdir(training_dir)))
+                else:
+                    model = build_custom_model(len(os.listdir(training_dir)))
+                model.save(filepath=MODEL_SAVE_PATH, overwrite=True)
+                print("Successfully built model and saved to {}".format(MODEL_SAVE_PATH))
 
     elif args.command == "train":
         # Load the model from file
