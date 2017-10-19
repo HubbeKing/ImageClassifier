@@ -103,6 +103,11 @@ def train_model(mod, training, validation, gpus=0, batch_size=32, epochs=10, sav
     if gpus > 1:
         # If we have specified more than 1 GPU, perform data parallelism
         mod = multi_gpu_model(mod, gpus)
+        if batch_size // gpus < 32:
+            # As each batch will be divided into sub-batches among the GPUs, make sure it's large-ish
+            # https://keras.io/utils/#multi_gpu_model
+            print "batch_size setting would result in only {} samples per GPU, increasing to {} so each GPU gets 32 samples".format((batch_size//gpus), (32*gpus))
+            batch_size = 32 * gpus
     # Compile model, making it ready for training
     mod.compile(optimizer="rmsprop", loss="categorical_crossentropy", metrics=["accuracy"])
 
@@ -157,6 +162,11 @@ def fine_tune_model(mod, training, validation, gpus=0, batch_size=32, epochs=10)
     if gpus > 1:
         # If we have specified more than 1 GPU, perform data parallelism
         mod = multi_gpu_model(mod, gpus)
+        if batch_size // gpus < 32:
+            # As each batch will be divided into sub-batches among the GPUs, make sure it's large-ish
+            # https://keras.io/utils/#multi_gpu_model
+            print "batch_size setting would result in only {} samples per GPU, increasing to {} so each GPU gets 32 samples".format((batch_size//gpus), (32*gpus))
+            batch_size = 32 * gpus
 
     # Compile the model with a tweaked SGD optimizer with a slow learning rate
     # This make sure the updates done to the weights stays small, so we don't break things
@@ -242,8 +252,8 @@ if __name__ == "__main__":
                               help="How many epochs to train for, defaults to 10")
     train_parser.add_argument("-b", "--batch_size",
                               type=int,
-                              default=10,
-                              help="How large batches to split training data into, defaults to 10")
+                              default=32,
+                              help="How large batches to split training data into, defaults to 32")
     train_parser.add_argument("-s", "--save_images",
                               help="Save the augmented images generated during training to save/augmented_images",
                               action="store_true")
@@ -264,8 +274,8 @@ if __name__ == "__main__":
                                   help="How many epochs to train for, defaults to 10")
     fine_tune_parser.add_argument("-b", "--batch_size",
                                   type=int,
-                                  default=10,
-                                  help="How large batches to split training data into, defaults to 10")
+                                  default=32,
+                                  help="How large batches to split training data into, defaults to 32")
     fine_tune_parser.add_argument("data_dir",
                                   type=str,
                                   help="A path to a directory containing the training data")
