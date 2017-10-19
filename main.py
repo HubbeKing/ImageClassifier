@@ -327,7 +327,7 @@ if __name__ == "__main__":
         overwrite = True
         if os.path.exists(MODEL_SAVE_PATH):
             print("A saved model already exists!")
-            overwrite = raw_input("Overwrite saved model? (Y/N)")
+            overwrite = raw_input("Overwrite saved model? (Y/N) ")
             if overwrite.upper() != "Y":
                 overwrite = False
         if not os.path.exists(MODEL_SAVE_PATH) or overwrite:
