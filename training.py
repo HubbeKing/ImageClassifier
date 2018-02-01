@@ -60,7 +60,7 @@ def train_from_directories(model, training_dir, validation_dir, image_size, batc
     Saves the class index to file if save_index=True
     """
 
-    # Perform real-time data augmentation to (hopefully) get better end-results
+    # Perform real-time data augmentation to help reduce risk of over-fitting
     train_datagen = ImageDataGenerator(
         rotation_range=40,
         width_shift_range=0.2,
@@ -73,6 +73,7 @@ def train_from_directories(model, training_dir, validation_dir, image_size, batc
         rescale=1./255
     )
 
+    # Don't do as much augmentation on validation data, to speed up end-of-epoch validation
     test_datagen = ImageDataGenerator(rescale=1. / 255)
 
     train_generator = train_datagen.flow_from_directory(
@@ -83,6 +84,8 @@ def train_from_directories(model, training_dir, validation_dir, image_size, batc
         save_to_dir=save_dir,
         save_prefix="sample"
     )
+
+    # if we've been told to save the index, get the save path from main.py and dump the class index to a file
     if save_index:
         from main import INDEX_SAVE_PATH
         with open(INDEX_SAVE_PATH, "wb") as pickle_file:
