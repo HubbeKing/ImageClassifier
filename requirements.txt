@@ -3,4 +3,4 @@ Keras==2.1.*
 numpy==1.14.*
 pillow==5.*
 six==1.11.*
-tensorflow==1.4.*
+tensorflow==1.7.*
