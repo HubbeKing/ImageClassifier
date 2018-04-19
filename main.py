@@ -178,7 +178,7 @@ class ImageTagger(object):
         Modification of Keras' built-in ImageNet class decoder (keras.applications.imagenet_utils.decode_predictions)
         Uses the image classes found in the training data to decode a model prediction
         """
-        inverse_index = {v: k for k, v in self.classes.iteritems()}
+        inverse_index = {v: k for k, v in self.classes.items()}
         results = []
         for pred in preds:
             for i in range(len(pred)):
