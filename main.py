@@ -4,7 +4,7 @@ import os
 from six.moves import input
 
 from keras.applications.inception_resnet_v2 import InceptionResNetV2, preprocess_input
-from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
 from keras.layers import Dense, Dropout, GlobalAveragePooling2D
 from keras.models import load_model, Model
 from keras.optimizers import SGD, RMSprop
@@ -101,8 +101,9 @@ class ImageTagger(object):
 
         # Actually train the model, saving the model after every epoch if model has improved
         # Also save tensorboard-compatible logs for later visualization
-        checkpointer = ModelCheckpoint(filepath=MODEL_SAVE_PATH, save_best_only=True, verbose=1)
+        checkpointer = ModelCheckpoint(filepath=MODEL_SAVE_PATH, verbose=1)
         tensorboard_log = TensorBoard(log_dir=os.path.join(BASE_DIR, "save", "logs"))
+        early_stopper = EarlyStopping(patience=2, verbose=1)
 
         image_save_dir = os.path.join(BASE_DIR, "save", "augmented_images")
 
@@ -111,7 +112,7 @@ class ImageTagger(object):
                                batch_size=batch_size,
                                nb_epochs=epochs,
                                image_size=(299, 299),
-                               callbacks=[checkpointer, tensorboard_log],
+                               callbacks=[checkpointer, tensorboard_log, early_stopper],
                                save_dir=image_save_dir if save_images else False,
                                save_index=True)
 
@@ -129,10 +130,10 @@ class ImageTagger(object):
         Fine-tune the classifier model's top convolutional layers with the given data directories
         """
 
-        # TODO check these, as they are valid for InceptionV3, but InceptionResNetV2 has different architecture
-        for layer in self.model.layers[:249]:
+        # TODO check these values. Model has 783 total layers.
+        for layer in self.model.layers[:700]:
             layer.trainable = False
-        for layer in self.model.layers[249:]:
+        for layer in self.model.layers[700:]:
             layer.trainable = True
 
         if gpus > 1:
