@@ -2,6 +2,7 @@ import argparse
 import pickle
 import os
 from six.moves import input
+import sys
 
 from keras.applications.inception_resnet_v2 import InceptionResNetV2, preprocess_input
 from keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
@@ -265,10 +266,13 @@ if __name__ == "__main__":
 
         if not model_loaded and not index_loaded:
             print("Model and class index could not be loaded.")
+            sys.exit(1)
         elif not model_loaded:
             print("Model could not be loaded.")
+            sys.exit(1)
         elif not index_loaded:
             print("Class index could not be loaded.")
+            sys.exit(1)
         else:
             for image_path in args.image_file_path:
                 # If image_file_path is a dir, predict on all images inside it
@@ -277,6 +281,7 @@ if __name__ == "__main__":
                         classifier.classify_image(os.path.join(image_path, img_file))
                 else:
                     classifier.classify_image(image_path)
+            sys.exit(0)
 
     # Next, determine how the data dir is set up
     # If it's full of subdirectories, one for each image class, split it 70/30 into training and validation data
