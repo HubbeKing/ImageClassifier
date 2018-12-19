@@ -17,11 +17,11 @@ from training import split_data_directory, train_from_directories
 
 
 BASE_DIR = os.path.dirname(__file__)
-MODEL_SAVE_PATH = os.path.join(BASE_DIR, "model", "image_tagger.h5")
+MODEL_SAVE_PATH = os.path.join(BASE_DIR, "model", "classifier_model.h5")
 INDEX_SAVE_PATH = os.path.join(BASE_DIR, "model", "class_index.pkl")
 
 
-class ImageTagger(object):
+class ImageClassifier(object):
     """
     An wrapped class around an InceptionResNetV2-based Image Classification model.
     """
@@ -260,7 +260,7 @@ if __name__ == "__main__":
     if args.command == "classify":
         # If we're just classifying, load the model from disk
         # Then go through the list of given image filepaths and predict the class of each in turn
-        classifier = ImageTagger()
+        classifier = ImageClassifier()
         model_loaded = classifier.load_model()
         index_loaded = classifier.load_class_index()
 
@@ -309,7 +309,7 @@ if __name__ == "__main__":
             if overwrite.upper() != "Y":
                 overwrite = False
         if not os.path.exists(MODEL_SAVE_PATH) or overwrite:
-            classifier = ImageTagger()
+            classifier = ImageClassifier()
             classifier.build_model(len(os.listdir(training_dir)))
             classifier.save_model()
 
@@ -317,7 +317,7 @@ if __name__ == "__main__":
 
     elif args.command == "train":
         # Load the model from file
-        classifier = ImageTagger()
+        classifier = ImageClassifier()
         classifier.load_model()
 
         # Train the model
@@ -334,7 +334,7 @@ if __name__ == "__main__":
 
     elif args.command == "fine_tune":
         # Simply load the model and begin fine-tuning
-        classifier = ImageTagger()
+        classifier = ImageClassifier()
         classifier.load_model()
 
         classifier.fine_tune(training_dir, validation_dir,
