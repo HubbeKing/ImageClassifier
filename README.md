@@ -1,25 +1,23 @@
-#ImageTagger
+# ImageClassifier
 
-###License information
+### License information
 
 * This project uses the Inception model weights provided by Keras
 * These are provided under the Apache 2.0 license
 * https://github.com/tensorflow/models/blob/master/LICENSE
 * Consequently, this work is also licensed under the Apache 2.0 license
 
-###Linux Installation
+### Linux Installation
 
-* Install using python 2.7
+* Known to work with python versions 2.7 and 3.6, should work with 3.7 once Tensorflow is available for it
 * Using a virtualenv is highly recommended
 * For GPU training, tensorflow-gpu is required
 
-###Windows Installation
+### Windows Installation
 
 * Install in a Docker container using the provided Dockerfile
-* OR
-* Install using Anaconda and a python2.7 environment
-* Install Theano instead of Tensorflow, as Tensorflow requires python3 on Windows for some reason
+* Mount input data as a volume during training, or modify Dockerfile to add image data to desired location
 
-###Usage
+### Usage
 
-* TBD
+* See `python main.py -h`
