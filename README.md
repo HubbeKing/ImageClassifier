@@ -17,21 +17,25 @@ Originally created as part of a Masters Thesis project in Computer Science.
 * Using a virtualenv is highly recommended
 * For GPU training, tensorflow-gpu is required
 
-* `git clone https://github.com/HubbeKing/ImageClassifier.git`
-* `cd ImageClassifier`
-* `virtualenv env`
-* `source env/bin/activate`
-* `pip install -r requirements.txt`
-* Optionally, for GPU support `pip install tensorflow-gpu`
+```sh
+git clone https://github.com/HubbeKing/ImageClassifier.git`
+cd ImageClassifier
+virtualenv env
+source env/bin/activate
+pip install -r requirements.txt
+```
+Optionally, for GPU support `pip install tensorflow-gpu`
 
 ### Windows Installation
 
 * Install in a Docker container using the provided Dockerfile
 * Mount input data as a volume during training, or modify Dockerfile to add image data to desired location
 
-* `git clone https://github.com/HubbeKing/ImageClassifier.git`
-* `cd ImageClassifier`
-* `docker build -t classifier .`
+```sh
+git clone https://github.com/HubbeKing/ImageClassifier.git`
+cd ImageClassifier
+docker build -t classifier .
+```
 
 ### Usage
 
