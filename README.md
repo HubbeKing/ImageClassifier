@@ -1,5 +1,9 @@
 # ImageClassifier
 
+A tool for training and using an Inception-Resnet-V2 convolutional network for image classification, using transfer learning.
+
+Originally created as part of a Masters Thesis project in Computer Science.
+
 ### License information
 
 * This project uses the Inception model weights provided by Keras
