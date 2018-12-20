@@ -7,7 +7,7 @@ ADD . /app
 RUN pip install -r requirements.txt
 
 # By default, run main.py -h
-# By laying it out as ENTRYPOINT and CMD, one can just do "docker run image_tagger train /path/to/data" to train the model
+# By laying it out as ENTRYPOINT and CMD, one can just do "docker run IMAGE train /path/to/data" to train the model
 ENTRYPOINT ["python", "main.py"]
 CMD ["-h"]
 
