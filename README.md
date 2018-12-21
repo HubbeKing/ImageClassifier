@@ -37,6 +37,24 @@ cd ImageClassifier
 docker build -t classifier .
 ```
 
-### Usage
+### Usage details
 
-* See `python main.py -h` on linux OR `docker run classifier` on Windows
+* See `python main.py -h` on linux OR `docker run classifier` on Windows for specifics and more arguments
+
+### Example usage
+```sh
+# Build an untrained model based on your input data
+python main.py build path/to/training_data
+
+# Train the model for a number of epochs on your input data
+python main.py train --epochs=50 path/to/training_data
+
+# Test out the model to see how it performs on an image or folder containing images
+python main.py classify path/to/image.jpg path/to/other_image.jpg path/to/folder_of_images
+
+# If needed, fine-tune the model for greater performance
+python main.py fine_tune --epochs=50 path/to/training_data
+
+# Test model again to see improvements
+python main.py classify path/to/image.jpg path/to/other_image.jpg path/to/folder_of_images
+```
